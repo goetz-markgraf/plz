@@ -1,7 +1,12 @@
 use clap::Parser;
 
 #[derive(Parser, Debug)]
-#[command(name = "plz", about = "Convert natural language into shell commands")]
+#[command(
+    name = "plz",
+    about = "Convert natural language into shell commands",
+    version,
+    disable_version_flag = true
+)]
 pub struct PlzArgs {
     /// Natural language query
     #[arg(value_name = "QUERY")]
@@ -14,4 +19,8 @@ pub struct PlzArgs {
     /// Output only the raw command
     #[arg(long = "command-only")]
     pub command_only: bool,
+
+    /// Print version information
+    #[arg(short = 'v', long = "version", action = clap::ArgAction::Version)]
+    pub version: (),
 }

@@ -49,18 +49,17 @@ When `model` is absent in config, call `GET /models` from the configured endpoin
 
 ### 6. Output format
 
-```
-### Beschreibung
-<kurze Beschreibung des Befehls>
+Terminal output uses ANSI escape codes (no raw markdown printed to the terminal):
 
-### Parameter
-- `--flag`: Beschreibung
-
-> **Shell-Befehl:**
-> ```bash
-> command --flag value
-> ```
 ```
+<description>        ← cyan bold
+Parameter:           ← bold (only shown when params are present)
+   - <param line>
+Shell-Befehl:        ← cyan bold label
+<command>            ← green background highlight
+```
+
+If the LLM response contains no recognisable shell code block, the raw response text is printed followed by a yellow note: `(Note: No executable command found in the response.)`
 
 ## Risks / Trade-offs
 

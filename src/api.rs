@@ -142,3 +142,46 @@ impl From<anyhow::Error> for PlzError {
         PlzError::Anyhow(e)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Verify that special characters (dots, quotes, backslashes, Unicode) in
+    /// the user query are correctly JSON-encoded and survive a round-trip
+    /// through serde_json without corruption or URL-encoding artefacts.
+    #[test]
+    fn test_chat_request_serialises_special_chars() {
+        let queries = &[
+            r#"show me all files with .rs extension"#,
+            r#"find "my file" in /tmp"#,
+            r#"list files with \ backslash in name"#,
+            "zeige Dateien mit Umlauten: ä ö ü",
+        ];
+
+        for query in queries {
+            let req = ChatCompletionRequest {
+                model: "test-model".to_string(),
+                messages: vec![
+                    Message { role: "user".to_string(), content: query.to_string() },
+                ],
+            };
+            let json = serde_json::to_string(&req)
+                .expect("serialisation should not fail");
+            let round_trip: serde_json::Value =
+                serde_json::from_str(&json).expect("must be valid JSON");
+            let content = round_trip["messages"][0]["content"]
+                .as_str()
+                .expect("content must be a string");
+            assert_eq!(
+                content, *query,
+                "round-trip failed for query: {query}"
+            );
+            // Confirm no URL-percent-encoding crept in
+            assert!(
+                !content.contains('%'),
+                "unexpected percent-encoding in serialised query: {content}"
+            );
+        }
+    }
+}

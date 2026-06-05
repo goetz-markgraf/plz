@@ -9,7 +9,7 @@ The `plz` binary SHALL accept a natural language query as a positional argument 
 
 #### Scenario: Query with special characters
 - **WHEN** the user runs `plz "show me all files with .rs extension"`
-- **THEN** the tool properly URL-encodes and sends the query to the API
+- **THEN** the tool properly JSON-encodes and sends the query to the API via HTTP POST body
 
 #### Scenario: Empty query
 - **WHEN** the user runs `plz` with no arguments
@@ -20,7 +20,7 @@ The tool SHALL display the LLM response in a structured format with description,
 
 #### Scenario: Formatted response display
 - **WHEN** the LLM returns a valid response containing a shell command
-- **THEN** the tool displays: a brief description of the command, parameter explanations, and the command in a markdown code block with `bash` language tag, prefixed with `> **Shell-Befehl:**`
+- **THEN** the tool displays: a brief description of the command (in cyan bold), parameter explanations (if present), and the command highlighted with a `Shell-Befehl:` label (cyan bold) followed by the command itself rendered with a green background — all via ANSI terminal styling
 
 #### Scenario: Response without code block
 - **WHEN** the LLM returns text without a code block

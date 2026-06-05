@@ -67,9 +67,9 @@
 
 - [x] 9.1 Run `cargo build` and verify binary is produced at `target/debug/plz`
 - [x] 9.2 Run `cargo test` to verify unit tests passes
-- [ ] 9.3 Test with config missing: verify graceful error message
-- [ ] 9.4 Test with invalid config JSON: verify parse error message
-- [ ] 9.5 Test with valid config but no model: verify model listing works
-- [ ] 9.6 Test with valid config and model: verify query execution works
-- [ ] 9.7 Test `--command-only` flag: verify only command is output
-- [ ] 9.8 Test `--model` flag: verify model override works
+- [x] 9.3 Test with config missing: verify graceful error message
+- [x] 9.4 Test with invalid config JSON: verify parse error message
+- [x] 9.5 Test with valid config but no model: verify model listing works
+- [x] 9.6 Test with valid config and model: verify query execution works
+- [x] 9.7 Test `--command-only` flag: verify only command is output
+- [x] 9.8 Test `--model` flag: verify model override works
