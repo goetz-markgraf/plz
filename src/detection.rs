@@ -22,13 +22,14 @@ The user's shell is: {}.
 
 Structure the answer like this:
 
+<short explanation of the command>
+
+Parameters:
+<explanation of each used parameter>
+
 ```bash
 <command to execute>
 ```
-
-Explaination:
-<short explanation of the command>
-<explaination of all used parameters>
 
 ---<if there are sensible Alternatives>
 Alternatives

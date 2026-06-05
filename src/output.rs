@@ -78,11 +78,24 @@ fn is_shell_language(lang: &str) -> bool {
     SHELL_LANGUAGES.contains(&lang.to_lowercase().as_str())
 }
 
-/// Returns (description_text, command, param_lines) if a shell command block is found.
-/// Parses line-by-line with a state machine to handle inline backticks correctly.
-fn parse_llm_response(content: &str) -> Option<(String, String, Vec<String>)> {
+fn is_alternatives_header(text: &str) -> bool {
+    let lower = text.trim().to_lowercase();
+    lower == "alternatives" || lower == "alternative"
+        || lower == "alternatives:" || lower == "alternative:"
+}
+
+fn is_param_header(text: &str) -> bool {
+    let lower = text.trim().to_lowercase();
+    lower == "parameter:" || lower == "parameter"
+        || lower == "parameters:" || lower == "parameters"
+        || (lower.starts_with("parameter") && lower.ends_with(':'))
+}
+
+/// Returns (description, command, param_lines, alternatives)
+/// where alternatives is Vec<(description, command)>.
+fn parse_llm_response(content: &str) -> Option<(String, String, Vec<String>, Vec<(String, String)>)> {
     #[derive(PartialEq)]
-    enum Section { Before, InCodeBlock, AfterCommand }
+    enum Section { Before, InCodeBlock, AfterCommand, InAlternative, InAltCodeBlock }
 
     let mut description = String::new();
     let mut param_lines: Vec<String> = Vec::new();
@@ -90,6 +103,11 @@ fn parse_llm_response(content: &str) -> Option<(String, String, Vec<String>)> {
     let mut code_block_lines: Vec<String> = Vec::new();
     let mut section = Section::Before;
     let mut in_params = false;
+
+    // Alternative state
+    let mut alternatives: Vec<(String, String)> = Vec::new();
+    let mut alt_description = String::new();
+    let mut alt_in_params = false;
 
     for line in content.lines() {
         match section {
@@ -100,11 +118,16 @@ fn parse_llm_response(content: &str) -> Option<(String, String, Vec<String>)> {
                         code_block_lines.clear();
                         section = Section::InCodeBlock;
                     }
-                    // Non-shell code blocks (or blocks after the command) are skipped
                     continue;
                 }
 
                 if is_horizontal_rule(line) {
+                    if command.is_some() {
+                        // Start of alternatives section
+                        section = Section::InAlternative;
+                        alt_description.clear();
+                        alt_in_params = false;
+                    }
                     continue;
                 }
 
@@ -115,12 +138,7 @@ fn parse_llm_response(content: &str) -> Option<(String, String, Vec<String>)> {
                     continue;
                 }
 
-                let lower = trimmed.to_lowercase();
-                let is_param_header = lower == "parameter:" || lower == "parameter"
-                    || lower == "parameters:" || lower == "parameters"
-                    || lower.starts_with("parameter") && lower.ends_with(':');
-
-                if is_param_header {
+                if is_param_header(trimmed) {
                     in_params = true;
                     continue;
                 }
@@ -136,9 +154,63 @@ fn parse_llm_response(content: &str) -> Option<(String, String, Vec<String>)> {
             }
             Section::InCodeBlock => {
                 if line.trim_start().starts_with("```") {
-                    // End of code block
                     command = Some(code_block_lines.join("\n"));
                     section = Section::AfterCommand;
+                } else {
+                    code_block_lines.push(line.to_string());
+                }
+            }
+            Section::InAlternative => {
+                if line.trim_start().starts_with("```") {
+                    let lang = line.trim_start().trim_start_matches('`').trim().to_string();
+                    if is_shell_language(&lang) {
+                        code_block_lines.clear();
+                        section = Section::InAltCodeBlock;
+                    }
+                    continue;
+                }
+
+                if is_horizontal_rule(line) {
+                    // Another alternative block starts
+                    alt_description.clear();
+                    alt_in_params = false;
+                    continue;
+                }
+
+                let stripped = full_strip_markdown(line);
+                let trimmed = stripped.trim();
+
+                if trimmed.is_empty() {
+                    continue;
+                }
+
+                if is_alternatives_header(trimmed) {
+                    continue;
+                }
+
+                if is_param_header(trimmed) {
+                    alt_in_params = true;
+                    continue;
+                }
+
+                if !alt_in_params {
+                    if !alt_description.is_empty() {
+                        alt_description.push(' ');
+                    }
+                    alt_description.push_str(trimmed);
+                }
+                // param lines of alternatives are currently ignored
+            }
+            Section::InAltCodeBlock => {
+                if line.trim_start().starts_with("```") {
+                    let alt_cmd = code_block_lines.join("\n").trim().to_string();
+                    if !alt_cmd.is_empty() {
+                        let desc = alt_description.split_whitespace().collect::<Vec<_>>().join(" ");
+                        alternatives.push((desc, alt_cmd));
+                    }
+                    alt_description.clear();
+                    alt_in_params = false;
+                    section = Section::InAlternative;
                 } else {
                     code_block_lines.push(line.to_string());
                 }
@@ -153,11 +225,11 @@ fn parse_llm_response(content: &str) -> Option<(String, String, Vec<String>)> {
 
     description = description.split_whitespace().collect::<Vec<_>>().join(" ");
 
-    Some((description, cmd.trim().to_string(), param_lines))
+    Some((description, cmd.trim().to_string(), param_lines, alternatives))
 }
 
 pub fn format_response(content: &str) {
-    if let Some((description, command, param_lines)) = parse_llm_response(content) {
+    if let Some((description, command, param_lines, alternatives)) = parse_llm_response(content) {
         if !description.is_empty() {
             println!("{}", apply(CYAN_BOLD, &description));
             println!();
@@ -173,6 +245,15 @@ pub fn format_response(content: &str) {
 
         println!("{}", apply(CYAN_BOLD, "Shell-Befehl:"));
         println!("{}", apply(GREEN_BG, &command));
+
+        for (alt_desc, alt_cmd) in &alternatives {
+            println!();
+            println!("{}", apply(BOLD, "Alternative:"));
+            if !alt_desc.is_empty() {
+                println!("{}", apply(CYAN_BOLD, alt_desc));
+            }
+            println!("{}", apply(GREEN_BG, alt_cmd));
+        }
     } else {
         println!("{}", content);
         println!("\n\x1b[1;33m{}\x1b[0m", "(Note: No executable command found in the response.)");
@@ -180,7 +261,7 @@ pub fn format_response(content: &str) {
 }
 
 pub fn extract_command(content: &str) -> Option<String> {
-    parse_llm_response(content).map(|(_, cmd, _)| cmd)
+    parse_llm_response(content).map(|(_, cmd, _, _)| cmd)
 }
 
 pub fn format_command_only(content: &str) {
@@ -357,6 +438,42 @@ mod tests {
         let content = "No shell command here, just Python code.\n\n```python\nprint(\"hello\")\n```";
         let result = parse_llm_response(&content);
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_parse_response_with_alternatives() {
+        let content = "\
+Zeigt die URL des Remote-Origins an.
+
+Parameters:
+- origin: Name des Remotes
+
+```bash
+git remote get-url origin
+```
+
+---
+Alternatives
+
+Zeigt alle Remotes mit URLs an.
+
+Parameters:
+- -v: ausführliche Ausgabe
+
+```bash
+git remote -v
+```
+";
+        let result = parse_llm_response(content);
+        assert!(result.is_some(), "parse_llm_response returned None");
+        let r = result.unwrap();
+        assert!(r.0.contains("Zeigt die URL"), "description: {:?}", r.0);
+        assert_eq!(r.1, "git remote get-url origin");
+        assert!(!r.2.is_empty(), "expected param lines");
+        assert_eq!(r.3.len(), 1, "expected 1 alternative, got: {:?}", r.3);
+        let (alt_desc, alt_cmd) = &r.3[0];
+        assert!(alt_desc.contains("Zeigt alle Remotes"), "alt_desc: {:?}", alt_desc);
+        assert_eq!(alt_cmd, "git remote -v");
     }
 
      #[test]
