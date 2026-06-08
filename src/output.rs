@@ -74,6 +74,10 @@ pub fn format_response(content: &str) {
         Some(resp) => {
             println!("{}", apply(CYAN_BOLD, &resp.desc));
 
+            println!();
+            println!("{}", apply(CYAN_BOLD, "Shell-Befehl:"));
+            println!("{}", apply(GREEN_BG, &resp.command));
+
             if !resp.params.is_empty() {
                 println!();
                 println!("{}", apply(BOLD, "Parameter:"));
@@ -82,20 +86,18 @@ pub fn format_response(content: &str) {
                 }
             }
 
-            println!();
-            println!("{}", apply(CYAN_BOLD, "Shell-Befehl:"));
-            println!("{}", apply(GREEN_BG, &resp.command));
-
             for alt in &resp.alt {
                 println!();
                 println!("{}", apply(BOLD, "Alternative:"));
                 println!("{}", apply(CYAN_BOLD, &alt.desc));
+                println!("{}", apply(GREEN_BG, &alt.command));
                 if !alt.params.is_empty() {
+                    println!();
+                    println!("{}", apply(BOLD, "Parameter:"));
                     for p in &alt.params {
                         println!("   {} — {}", apply(BOLD, &p.param), p.desc);
                     }
                 }
-                println!("{}", apply(GREEN_BG, &alt.command));
             }
         }
         None => {
