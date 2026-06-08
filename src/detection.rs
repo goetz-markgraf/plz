@@ -13,7 +13,7 @@ pub fn detect_shell() -> String {
 }
 
 pub fn build_system_prompt() -> String {
-    "You are a helpful Assistant. Your answers are always short and to the point. Always answer in Json Format. The target format will be part of the user request.".to_string()
+    "You are a helpful Assistant. Your answers are always short and to the point. Avoid all motivative texts like 'that is great' or 'lets do this' etc.\nAlways answer in Json Format. The target format will be part of the user request.".to_string()
 }
 
 pub fn build_user_prompt(query: &str) -> String {
@@ -54,6 +54,7 @@ Give the answer as a Json formatted like this
 Rules:
 - Every parameter, flag, or placeholder that appears in the 'command' string MUST have an entry in 'params'.
 - Do not leave 'params' empty if the command contains flags or placeholders.
+- That includes commands like the "status" in "git status".
 - Only fill the 'alt' field if there are meaningful alternatives."#
     )
 }
