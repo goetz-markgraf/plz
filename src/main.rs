@@ -54,10 +54,11 @@ async fn main() {
     }
 
     let system_prompt = detection::build_system_prompt();
+    let user_prompt = detection::build_user_prompt(&args.query);
 
     let client = PlzClient::new(config.endpoint, config.api_key);
 
-    let content = match client.chat_completion(&model, &system_prompt, &args.query).await {
+    let content = match client.chat_completion(&model, &system_prompt, &user_prompt).await {
         Ok(c) => c,
         Err(PlzError::InvalidApiKey(_msg)) => {
             eprintln!("{}", PlzError::InvalidApiKey("".to_string()));

@@ -13,29 +13,48 @@ pub fn detect_shell() -> String {
 }
 
 pub fn build_system_prompt() -> String {
+    "You are a helpful Assistant. Your answers are always short and to the point. Always answer in Json Format. The target format will be part of the user request.".to_string()
+}
+
+pub fn build_user_prompt(query: &str) -> String {
     let os = detect_os();
     let shell = detect_shell();
     format!(
-         "You are a helpful assistant that converts natural language questions into shell commands.
-The user's operating system is: {}.
-The user's shell is: {}.
+        r#"Create a shell script that fulfills this demand: {query}
+It must always fit the users operating system and used shell:
 
-Structure the answer like this:
+User OS: {os}
+User Shell: {shell}
 
-<short explanation of the command>
+Give the answer as a Json formatted like this
 
-Parameters:
-<explanation of each used parameter>
+{{
+   "command": "<only the command, maybe with place holders for parameters' values>",
+   "desc": "<short description (2-3 sentences) what the code does>",
+   "params": [
+     {{
+        "param": "<parameter like it is in the 'command'>",
+        "desc": "<describe shortly what this param does>"
+     }}
+   ],
+   "alt": [
+     {{
+       "command": "<only the command, maybe with place holders for parameters' values>",
+       "desc": "<short description (2-3 sentences) what the code does>",
+       "params": [
+         {{
+            "param": "<parameter like it is in the 'command'>",
+            "desc": "<describe shortly what this param does>"
+         }}
+       ]
+     }}
+   ]
+}}
 
-```bash
-<command to execute>
-```
-
----<if there are sensible Alternatives>
-Alternatives
-
-<display like above>",
-        os, shell
+Rules:
+- Every parameter, flag, or placeholder that appears in the 'command' string MUST have an entry in 'params'.
+- Do not leave 'params' empty if the command contains flags or placeholders.
+- Only fill the 'alt' field if there are meaningful alternatives."#
     )
 }
 
@@ -86,12 +105,19 @@ mod tests {
      }
 
     #[test]
-    #[serial]
-    fn test_build_system_prompt_contains_os_and_shell() {
+    fn test_build_system_prompt_is_static() {
         let prompt = build_system_prompt();
+        assert!(prompt.contains("Json Format"), "System prompt should mention Json Format: {}", prompt);
+    }
+
+    #[test]
+    #[serial]
+    fn test_build_user_prompt_contains_os_and_shell() {
+        let prompt = build_user_prompt("list files");
         let os = detect_os();
         let shell = detect_shell();
-        assert!(prompt.contains(os), "Prompt should contain OS info: {}", prompt);
-        assert!(prompt.contains(&shell), "Prompt should contain shell info: {}", prompt);
-     }
+        assert!(prompt.contains(os), "User prompt should contain OS info: {}", prompt);
+        assert!(prompt.contains(&shell), "User prompt should contain shell info: {}", prompt);
+        assert!(prompt.contains("list files"), "User prompt should contain the query: {}", prompt);
+    }
 }

@@ -14,6 +14,8 @@ pub struct ChatCompletionRequest {
     pub model: String,
     #[serde(rename = "messages")]
     pub messages: Vec<Message>,
+    #[serde(rename = "stop", skip_serializing_if = "Option::is_none")]
+    pub stop: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -91,6 +93,7 @@ impl PlzClient {
         let request = ChatCompletionRequest {
             model: model.to_string(),
             messages,
+            stop: None,
         };
 
         let url = format!("{}/chat/completions", self.endpoint);
@@ -165,6 +168,7 @@ mod tests {
                 messages: vec![
                     Message { role: "user".to_string(), content: query.to_string() },
                 ],
+                stop: None,
             };
             let json = serde_json::to_string(&req)
                 .expect("serialisation should not fail");

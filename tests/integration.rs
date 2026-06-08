@@ -160,7 +160,7 @@ fn test_query_execution_with_valid_config() {
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(
-            r#"{"choices":[{"message":{"role":"assistant","content":"List all files:\n\n```bash\nls -la\n```\n\nExplanation: lists directory contents."}}]}"#,
+            r#"{"choices":[{"message":{"role":"assistant","content":"{\"command\":\"ls -la\",\"desc\":\"Lists all files including hidden ones in long format.\",\"params\":[],\"alt\":[]}"}}]}"#,
         )
         .create();
 
@@ -203,7 +203,7 @@ fn test_command_only_flag() {
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(
-            r#"{"choices":[{"message":{"role":"assistant","content":"Here is the command:\n\n```bash\nls -la\n```\n\nThis lists files."}}]}"#,
+            r#"{"choices":[{"message":{"role":"assistant","content":"{\"command\":\"ls -la\",\"desc\":\"Lists all files.\",\"params\":[],\"alt\":[]}"}}]}"#,
         )
         .create();
 
@@ -250,7 +250,7 @@ fn test_model_flag_overrides_config() {
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(
-            r#"{"choices":[{"message":{"role":"assistant","content":"```bash\necho ok\n```"}}]}"#,
+            r#"{"choices":[{"message":{"role":"assistant","content":"{\"command\":\"echo ok\",\"desc\":\"Echoes ok.\",\"params\":[],\"alt\":[]}"}}]}"#,
         )
         .create();
 
