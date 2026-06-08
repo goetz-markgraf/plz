@@ -16,6 +16,8 @@ pub struct ChatCompletionRequest {
     pub messages: Vec<Message>,
     #[serde(rename = "stop", skip_serializing_if = "Option::is_none")]
     pub stop: Option<Vec<String>>,
+    #[serde(rename = "max_tokens", skip_serializing_if = "Option::is_none")]
+    pub max_tokens: Option<u32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -78,6 +80,7 @@ impl PlzClient {
         model: &str,
         system_prompt: &str,
         user_query: &str,
+        max_tokens: Option<u32>,
     ) -> Result<String, PlzError> {
         let messages = vec![
             Message {
@@ -94,6 +97,7 @@ impl PlzClient {
             model: model.to_string(),
             messages,
             stop: None,
+            max_tokens: max_tokens.or(Some(512)),
         };
 
         let url = format!("{}/chat/completions", self.endpoint);
@@ -169,6 +173,7 @@ mod tests {
                     Message { role: "user".to_string(), content: query.to_string() },
                 ],
                 stop: None,
+                max_tokens: None,
             };
             let json = serde_json::to_string(&req)
                 .expect("serialisation should not fail");

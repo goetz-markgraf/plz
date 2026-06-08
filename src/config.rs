@@ -5,6 +5,8 @@ pub struct Config {
     pub api_key: String,
     #[serde(default)]
     pub model: Option<String>,
+    #[serde(default)]
+    pub max_tokens: Option<u32>,
 }
 
 impl Default for Config {
@@ -13,6 +15,7 @@ impl Default for Config {
             endpoint: String::new(),
             api_key: String::new(),
             model: None,
+            max_tokens: None,
         }
     }
 }
