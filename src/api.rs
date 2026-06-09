@@ -6,6 +6,8 @@ pub struct Message {
     pub role: String,
     #[serde(rename = "content")]
     pub content: String,
+    #[serde(rename = "reasoning", default, skip_serializing_if = "Option::is_none")]
+    pub reasoning: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -18,6 +20,8 @@ pub struct ChatCompletionRequest {
     pub stop: Option<Vec<String>>,
     #[serde(rename = "max_tokens", skip_serializing_if = "Option::is_none")]
     pub max_tokens: Option<u32>,
+    #[serde(rename = "think", skip_serializing_if = "Option::is_none")]
+    pub think: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -81,15 +85,18 @@ impl PlzClient {
         system_prompt: &str,
         user_query: &str,
         max_tokens: Option<u32>,
+        think: Option<bool>,
     ) -> Result<String, PlzError> {
         let messages = vec![
             Message {
                 role: "system".to_string(),
                 content: system_prompt.to_string(),
+                reasoning: None,
             },
             Message {
                 role: "user".to_string(),
                 content: user_query.to_string(),
+                reasoning: None,
             },
         ];
 
@@ -97,7 +104,8 @@ impl PlzClient {
             model: model.to_string(),
             messages,
             stop: None,
-            max_tokens: max_tokens.or(Some(512)),
+            max_tokens: max_tokens.or(Some(1024)),
+            think,
         };
 
         let url = format!("{}/chat/completions", self.endpoint);
@@ -140,7 +148,13 @@ impl PlzClient {
             )));
         }
 
-        Ok(choices[0].message.content.clone())
+        let msg = &choices[0].message;
+        let content = if msg.content.trim().is_empty() {
+            msg.reasoning.clone().unwrap_or_default()
+        } else {
+            msg.content.clone()
+        };
+        Ok(content)
     }
 }
 
@@ -170,10 +184,11 @@ mod tests {
             let req = ChatCompletionRequest {
                 model: "test-model".to_string(),
                 messages: vec![
-                    Message { role: "user".to_string(), content: query.to_string() },
+                    Message { role: "user".to_string(), content: query.to_string(), reasoning: None },
                 ],
                 stop: None,
                 max_tokens: None,
+                think: None,
             };
             let json = serde_json::to_string(&req)
                 .expect("serialisation should not fail");
@@ -192,5 +207,48 @@ mod tests {
                 "unexpected percent-encoding in serialised query: {content}"
             );
         }
+    }
+
+    /// Verify that `think` is omitted from JSON when None, and present when Some.
+    #[test]
+    fn test_think_field_serialisation() {
+        let make_req = |think: Option<bool>| ChatCompletionRequest {
+            model: "m".to_string(),
+            messages: vec![],
+            stop: None,
+            max_tokens: None,
+            think,
+        };
+
+        let json_none = serde_json::to_string(&make_req(None)).unwrap();
+        assert!(!json_none.contains("think"), "think should be absent when None");
+
+        let json_false = serde_json::to_string(&make_req(Some(false))).unwrap();
+        assert!(json_false.contains(r#""think":false"#), "think:false should be present");
+
+        let json_true = serde_json::to_string(&make_req(Some(true))).unwrap();
+        assert!(json_true.contains(r#""think":true"#), "think:true should be present");
+    }
+
+    /// Verify fallback to reasoning when content is empty.
+    #[test]
+    fn test_reasoning_field_deserialisation() {
+        let json = r#"{
+            "role": "assistant",
+            "content": "",
+            "reasoning": "some reasoning text"
+        }"#;
+        let msg: Message = serde_json::from_str(json).unwrap();
+        assert_eq!(msg.content, "");
+        assert_eq!(msg.reasoning.as_deref(), Some("some reasoning text"));
+
+        // content wins when non-empty
+        let json2 = r#"{
+            "role": "assistant",
+            "content": "actual answer",
+            "reasoning": "some reasoning text"
+        }"#;
+        let msg2: Message = serde_json::from_str(json2).unwrap();
+        assert_eq!(msg2.content, "actual answer");
     }
 }

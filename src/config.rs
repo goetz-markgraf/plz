@@ -7,6 +7,8 @@ pub struct Config {
     pub model: Option<String>,
     #[serde(default)]
     pub max_tokens: Option<u32>,
+    #[serde(default)]
+    pub think: Option<bool>,
 }
 
 impl Default for Config {
@@ -16,6 +18,7 @@ impl Default for Config {
             api_key: String::new(),
             model: None,
             max_tokens: None,
+            think: None,
         }
     }
 }

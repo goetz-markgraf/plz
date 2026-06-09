@@ -101,8 +101,9 @@ pub fn format_response(content: &str) {
             }
         }
         None => {
-            println!("{}", content);
-            println!("\n\x1b[1;33m{}\x1b[0m", "(Note: Could not parse JSON response.)");
+            eprintln!("\x1b[1;33m[DEBUG] Raw LLM response ({} bytes):\x1b[0m", content.len());
+            eprintln!("{}", content);
+            eprintln!("\x1b[1;31m[ERROR] Could not parse JSON response.\x1b[0m");
         }
     }
 }
@@ -115,8 +116,9 @@ pub fn format_command_only(content: &str) {
     match extract_command(content) {
         Some(command) => println!("{}", command),
         None => {
-            println!("{}", content);
-            println!("\n\x1b[1;33m{}\x1b[0m", "(Note: Could not parse JSON response.)");
+            eprintln!("\x1b[1;33m[DEBUG] Raw LLM response ({} bytes):\x1b[0m", content.len());
+            eprintln!("{}", content);
+            eprintln!("\x1b[1;31m[ERROR] Could not parse JSON response.\x1b[0m");
         }
     }
 }

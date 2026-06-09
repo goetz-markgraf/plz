@@ -58,7 +58,7 @@ async fn main() {
 
     let client = PlzClient::new(config.endpoint, config.api_key);
 
-    let content = match client.chat_completion(&model, &system_prompt, &user_prompt, config.max_tokens).await {
+    let content = match client.chat_completion(&model, &system_prompt, &user_prompt, config.max_tokens, config.think).await {
         Ok(c) => c,
         Err(PlzError::InvalidApiKey(_msg)) => {
             eprintln!("{}", PlzError::InvalidApiKey("".to_string()));
