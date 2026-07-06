@@ -4,7 +4,6 @@
 
   outputs = { my-base, ... }: my-base.lib.mkMacShell {
     packages = pkgs: with pkgs; [
-      nodejs_24
       opencode
       pkg-config
     ];
